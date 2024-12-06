@@ -63,6 +63,8 @@
 
 #include "sensors/battery.h"
 #include "sensors/sensors.h"
+#include "sensors/acceleration.h"  //scott
+#include "sensors/gyro.h"          //scott
 
 #include "telemetry/telemetry.h"
 #include "telemetry/msp_shared.h"
@@ -70,7 +72,8 @@
 #include "crsf.h"
 
 
-#define CRSF_CYCLETIME_US                   100000 // 100ms, 10 Hz
+//#define CRSF_CYCLETIME_US         100000 // 100ms, 10 Hz
+#define CRSF_CYCLETIME_US           10000  // 10ms, 100 Hz //scott modified
 #define CRSF_DEVICEINFO_VERSION             0x01
 #define CRSF_DEVICEINFO_PARAMETER_COUNT     0
 
@@ -91,7 +94,8 @@ static mspBuffer_t mspRxBuffer;
 
 #if defined(USE_CRSF_V3)
 
-#define CRSF_TELEMETRY_FRAME_INTERVAL_MAX_US 20000 // 20ms
+//#define CRSF_TELEMETRY_FRAME_INTERVAL_MAX_US 20000 // 20ms
+#define CRSF_TELEMETRY_FRAME_INTERVAL_MAX_US 10000 // 10ms //scott
 
 #if defined(USE_CRSF_CMS_TELEMETRY)
 #define CRSF_LINK_TYPE_CHECK_US 250000 // 250 ms
@@ -364,6 +368,52 @@ void crsfFrameAttitude(sbuf_t *dst)
 }
 
 /*
+0x1F IMU sensor  // scott testing new imu packet
+Payload:
+uint16_t    acc_x
+uint16_t    acc_y
+uint16_t    acc_z
+
+uint16_t    vel_x
+uint16_t    vel_y
+uint16_t    vel_z
+
+*/
+void crsfFrameIMUSensor(sbuf_t *dst)
+{
+    // use sbufWrite since CRC does not include frame length
+    sbufWriteU8(dst, CRSF_FRAME_IMU_PAYLOAD_SIZE + CRSF_FRAME_LENGTH_TYPE_CRC);
+    sbufWriteU8(dst, CRSF_FRAMETYPE_IMU);
+
+    int16_t acc_x = (int16_t)(acc.accADC[0] * acc.dev.acc_1G_rec * 1000); // Scale to milli-g
+    int16_t acc_y = (int16_t)(acc.accADC[1] * acc.dev.acc_1G_rec * 1000);
+    int16_t acc_z = (int16_t)(acc.accADC[2] * acc.dev.acc_1G_rec * 1000);
+    uint16_t acc_x_encoded = (uint16_t)(acc_x + 32768);
+    uint16_t acc_y_encoded = (uint16_t)(acc_y + 32768);
+    uint16_t acc_z_encoded = (uint16_t)(acc_z + 32768);
+
+    sbufWriteU16BigEndian(dst, acc_x_encoded);
+    sbufWriteU16BigEndian(dst, acc_y_encoded);
+    sbufWriteU16BigEndian(dst, acc_z_encoded);
+
+    //const float gyroToAngle = pidRuntime.dT * RAD;
+    int16_t vel_x = (int16_t)(gyro.gyroADC[0] * RAD * 1000);
+    int16_t vel_y = (int16_t)(gyro.gyroADC[1] * RAD * 1000);
+    int16_t vel_z = (int16_t)(gyro.gyroADC[2] * RAD * 1000);
+
+    uint16_t vel_x_encoded = (uint16_t)(vel_x + 32768);
+    uint16_t vel_y_encoded = (uint16_t)(vel_y + 32768);
+    uint16_t vel_z_encoded = (uint16_t)(vel_z + 32768);
+
+    sbufWriteU16BigEndian(dst, vel_x_encoded);
+    sbufWriteU16BigEndian(dst, vel_y_encoded);
+    sbufWriteU16BigEndian(dst, vel_z_encoded);
+
+    //const uint8_t batteryRemainingPercentage = calculateBatteryPercentageRemaining();
+    //sbufWriteU8(dst, batteryRemainingPercentage);
+}
+
+/*
 0x21 Flight mode text based
 Payload:
 char[]      Flight mode ( Null terminated string )
@@ -623,6 +673,7 @@ typedef enum {
     CRSF_FRAME_FLIGHT_MODE_INDEX,
     CRSF_FRAME_GPS_INDEX,
     CRSF_FRAME_HEARTBEAT_INDEX,
+    CRSF_FRAME_IMU_INDEX, // scott
     CRSF_SCHEDULE_COUNT_MAX
 } crsfFrameTypeIndex_e;
 
@@ -680,6 +731,12 @@ static void processCrsf(void)
         crsfFinalize(dst);
     }
 
+    if (currentSchedule & BIT(CRSF_FRAME_IMU_INDEX)) {
+        crsfInitializeFrame(dst);
+        crsfFrameIMUSensor(dst);
+        crsfFinalize(dst);
+    }
+
     if (currentSchedule & BIT(CRSF_FRAME_FLIGHT_MODE_INDEX)) {
         crsfInitializeFrame(dst);
         crsfFrameFlightMode(dst);
@@ -729,6 +786,29 @@ void crsfHandleDeviceInfoResponse(uint8_t *payload)
 #endif
 
 void initCrsfTelemetry(void)
+{
+    crsfTelemetryEnabled = crsfRxIsActive();
+    if (!crsfTelemetryEnabled) {
+        return;
+    }
+    deviceInfoReplyPending = false;
+#if defined(USE_MSP_OVER_TELEMETRY)
+    mspReplyPending = false;
+#endif
+    crsfSchedule[0] = BIT(CRSF_FRAME_IMU_INDEX);
+    //crsfSchedule[1] = BIT(CRSF_FRAME_IMU_INDEX);
+    //crsfSchedule[1] = BIT(CRSF_FRAME_ATTITUDE_INDEX);
+    //crsfSchedule[0] = BIT(CRSF_FRAME_ATTITUDE_INDEX);
+    //crsfSchedule[1] = BIT(CRSF_FRAME_IMU_INDEX);
+    //crsfSchedule[2] = BIT(CRSF_FRAME_BATTERY_SENSOR_INDEX);
+    crsfScheduleCount = 1;
+
+#if defined(USE_CRSF_CMS_TELEMETRY)
+    crsfDisplayportRegister();
+#endif
+}
+
+void initCrsfTelemetry_OG(void)
 {
     // check if there is a serial port open for CRSF telemetry (ie opened by the CRSF RX)
     // and feature is enabled, if so, set CRSF telemetry enabled
@@ -917,7 +997,7 @@ void handleCrsfTelemetry(timeUs_t currentTimeUs)
     }
 #endif
 
-    // Actual telemetry data only needs to be sent at a low frequency, ie 10Hz
+    // Actual telemetry data only needs to be sent at a low frequency, ie 10Hz  ** scott (100mhz imu telemetry)
     // Spread out scheduled frames evenly so each frame is sent at the same frequency.
     if (currentTimeUs >= crsfLastCycleTime + (CRSF_CYCLETIME_US / crsfScheduleCount)) {
         crsfLastCycleTime = currentTimeUs;
@@ -953,6 +1033,9 @@ int getCrsfFrame(uint8_t *frame, crsfFrameType_e frameType)
         break;
     case CRSF_FRAMETYPE_FLIGHT_MODE:
         crsfFrameFlightMode(sbuf);
+        break;
+    case CRSF_FRAMETYPE_IMU:
+        crsfFrameIMUSensor(sbuf);
         break;
 #if defined(USE_GPS)
     case CRSF_FRAMETYPE_GPS:

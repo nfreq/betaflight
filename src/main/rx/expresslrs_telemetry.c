@@ -49,18 +49,33 @@
 static uint8_t tlmBuffer[CRSF_FRAME_SIZE_MAX];
 
 typedef enum {
-    CRSF_FRAME_GPS_INDEX = 0,
+    CRSF_FRAME_ATTITUDE_INDEX = 0,
+    CRSF_FRAME_BATTERY_SENSOR_INDEX,
+    CRSF_FRAME_FLIGHT_MODE_INDEX,
+    CRSF_FRAME_GPS_INDEX,
+    CRSF_FRAME_HEARTBEAT_INDEX,
+    CRSF_FRAME_IMU_INDEX, // scott
+    CRSF_FRAME_PAYLOAD_TYPES_COUNT //should be last
+
+    /*CRSF_FRAME_GPS_INDEX = 0,
     CRSF_FRAME_BATTERY_SENSOR_INDEX,
     CRSF_FRAME_ATTITUDE_INDEX,
     CRSF_FRAME_FLIGHT_MODE_INDEX,
-    CRSF_FRAME_PAYLOAD_TYPES_COUNT //should be last
+    CRSF_FRAME_PAYLOAD_TYPES_COUNT //should be last*/
 } frameTypeIndex_e;
 
 static crsfFrameType_e payloadTypes[] = {
+    
+    CRSF_FRAMETYPE_ATTITUDE,
+    CRSF_FRAMETYPE_BATTERY_SENSOR,
+    CRSF_FRAMETYPE_FLIGHT_MODE,
     CRSF_FRAMETYPE_GPS,
+    CRSF_FRAMETYPE_HEARTBEAT,
+    CRSF_FRAMETYPE_IMU,
+    /*CRSF_FRAMETYPE_GPS,
     CRSF_FRAMETYPE_BATTERY_SENSOR,
     CRSF_FRAMETYPE_ATTITUDE,
-    CRSF_FRAMETYPE_FLIGHT_MODE
+    CRSF_FRAMETYPE_FLIGHT_MODE,*/
 };
 
 STATIC_UNIT_TESTED uint8_t tlmSensors = 0;
@@ -331,6 +346,9 @@ void initTelemetry(void)
     }
     if (telemetryIsSensorEnabled(SENSOR_MODE)) {
         tlmSensors |= BIT(CRSF_FRAME_FLIGHT_MODE_INDEX);
+    }
+    if (telemetryIsSensorEnabled(SENSOR_MODE)) {
+        tlmSensors |= BIT(CRSF_FRAME_IMU_INDEX);
     }
 #ifdef USE_GPS
     if (featureIsEnabled(FEATURE_GPS)
