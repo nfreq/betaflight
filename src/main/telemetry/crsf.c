@@ -387,26 +387,20 @@ void crsfFrameIMUSensor(sbuf_t *dst)
     sbufWriteU8(dst, CRSF_FRAMETYPE_IMU);
 
     int16_t acc_x = (int16_t)(acc.accADC[0] * acc.dev.acc_1G_rec * 1000); // [milli-g]
+    int16_t acc_y = (int16_t)(acc.accADC[1] * acc.dev.acc_1G_rec * 1000);
     int16_t acc_z = (int16_t)(acc.accADC[2] * acc.dev.acc_1G_rec * 1000);
-    uint16_t acc_x_encoded = (uint16_t)(acc_x + 32768);
-    uint16_t acc_y_encoded = (uint16_t)(acc_y + 32768);
-    uint16_t acc_z_encoded = (uint16_t)(acc_z + 32768);
 
-    sbufWriteU16BigEndian(dst, acc_x_encoded);
-    sbufWriteU16BigEndian(dst, acc_y_encoded);
-    sbufWriteU16BigEndian(dst, acc_z_encoded);
+    sbufWriteU16BigEndian(dst, (uint16_t)(acc_x + 32768));
+    sbufWriteU16BigEndian(dst, (uint16_t)(acc_y + 32768));
+    sbufWriteU16BigEndian(dst, (uint16_t)(acc_z + 32768));
 
     int16_t vel_x = (int16_t)(gyro.gyroADC[0] * RAD * 1000);
     int16_t vel_y = (int16_t)(gyro.gyroADC[1] * RAD * 1000);
     int16_t vel_z = (int16_t)(gyro.gyroADC[2] * RAD * 1000);
 
-    uint16_t vel_x_encoded = (uint16_t)(vel_x + 32768);
-    uint16_t vel_y_encoded = (uint16_t)(vel_y + 32768);
-    uint16_t vel_z_encoded = (uint16_t)(vel_z + 32768);
-
-    sbufWriteU16BigEndian(dst, vel_x_encoded);
-    sbufWriteU16BigEndian(dst, vel_y_encoded);
-    sbufWriteU16BigEndian(dst, vel_z_encoded);
+    sbufWriteU16BigEndian(dst, (uint16_t)(vel_x + 32768));
+    sbufWriteU16BigEndian(dst, (uint16_t)(vel_y + 32768));
+    sbufWriteU16BigEndian(dst, (uint16_t)(vel_z + 32768));
 
     //budget bandwidth limits
     //const uint8_t batteryRemainingPercentage = calculateBatteryPercentageRemaining();
