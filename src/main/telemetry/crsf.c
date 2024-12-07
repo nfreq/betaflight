@@ -44,6 +44,7 @@
 
 #include "drivers/nvic.h"
 #include "drivers/persistent.h"
+#include "drivers/time.h"
 
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
@@ -369,16 +370,15 @@ void crsfFrameAttitude(sbuf_t *dst)
 }
 
 /*
+0x2E IMU 
 Payload:
-=======
-0x2E IMU Payload
-uint16_t    acc_x
+uint16_t    acc_x (m/s^2)
 uint16_t    acc_y
 uint16_t    acc_z
-
-uint16_t    vel_x
+uint16_t    vel_x (rad/s)
 uint16_t    vel_y
 uint16_t    vel_z
+uint32_t    time_ms
 */
 
 void crsfFrameIMUSensor(sbuf_t *dst)
@@ -402,9 +402,7 @@ void crsfFrameIMUSensor(sbuf_t *dst)
     sbufWriteU16BigEndian(dst, (uint16_t)(vel_y + 32768));
     sbufWriteU16BigEndian(dst, (uint16_t)(vel_z + 32768));
 
-    //budget bandwidth limits
-    //const uint8_t batteryRemainingPercentage = calculateBatteryPercentageRemaining();
-    //sbufWriteU8(dst, batteryRemainingPercentage);
+    sbufWriteU32BigEndian(dst, millis());
 }
 
 /*
