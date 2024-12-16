@@ -859,11 +859,40 @@ static void toUpperCase(char* dest, const char* src, unsigned int maxSrcLength)
 
 static void osdBackgroundCraftName(osdElementParms_t *element)
 {
-    if (strlen(pilotConfig()->craftName) == 0) {
+    // Take over craft name field to carry FC RTC clock time (ms)
+    uint32_t rtc_ms = millis();
+    char temp[11]; // Temporary buffer for digits (max 10 digits + null terminator)
+    int i = 0;
+
+    // Preserve original value of rtc_ms for accurate digit extraction
+    uint32_t temp_rtc_ms = rtc_ms;
+
+    // Handle the zero case explicitly
+    if (rtc_ms == 0) {
+        temp[i++] = '0';
+    } else {
+        // Extract digits from the least significant to the most significant
+        while (temp_rtc_ms > 0) {
+            temp[i++] = '0' + (temp_rtc_ms % 10); // Get the least significant digit
+            temp_rtc_ms /= 10;                    // Remove the least significant digit
+        }
+    }
+
+    // Reverse the order of digits into element->buff
+    unsigned int j = 0; // Make j unsigned to match MAX_NAME_LENGTH
+    while (i > 0 && j < (MAX_NAME_LENGTH - 1)) { // Ensure we don't exceed MAX_NAME_LENGTH
+        element->buff[j++] = temp[--i];
+    }
+
+    element->buff[j] = '\0'; // Null-terminate the string
+
+
+
+    /*if (strlen(pilotConfig()->craftName) == 0) {
         strcpy(element->buff, "CRAFT_NAME");
     } else {
         toUpperCase(element->buff, pilotConfig()->craftName, MAX_NAME_LENGTH);
-    }
+    }*/
 }
 
 #ifdef USE_ACC
@@ -2082,6 +2111,8 @@ void osdAddActiveElements(void)
 #ifdef USE_PERSISTENT_STATS
     osdAddActiveElement(OSD_TOTAL_FLIGHTS);
 #endif
+
+    osdAddActiveElement(OSD_RTC_MS);
 }
 
 static bool osdDrawSingleElement(displayPort_t *osdDisplayPort, uint8_t item)

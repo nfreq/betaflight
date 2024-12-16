@@ -23,6 +23,7 @@
 struct sbuf_s;
 
 uint16_t crc16_ccitt(uint16_t crc, unsigned char a);
+uint16_t crc16_ccitt_uint32(uint32_t value);
 uint16_t crc16_ccitt_update(uint16_t crc, const void *data, uint32_t length);
 struct sbuf_s;
 void crc16_ccitt_sbuf_append(struct sbuf_s *dst, uint8_t *start);

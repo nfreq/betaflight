@@ -51,7 +51,7 @@ extern const char * const osdTimerSourceNames[OSD_NUM_TIMER_TYPES];
 
 #define OSD_FRAMERATE_MIN_HZ 1
 #define OSD_FRAMERATE_MAX_HZ 60
-#define OSD_FRAMERATE_DEFAULT_HZ 12
+#define OSD_FRAMERATE_DEFAULT_HZ 30
 
 #define OSD_PROFILE_BITS_POS 11
 #define OSD_PROFILE_MASK    (((1 << OSD_PROFILE_COUNT) - 1) << OSD_PROFILE_BITS_POS)
@@ -189,6 +189,7 @@ typedef enum {
     OSD_GPS_LAP_TIME_CURRENT,
     OSD_GPS_LAP_TIME_PREVIOUS,
     OSD_GPS_LAP_TIME_BEST3,
+    OSD_RTC_MS,
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
@@ -355,6 +356,7 @@ typedef struct osdConfig_s {
 #ifdef USE_SPEC_PREARM_SCREEN
     uint8_t osd_show_spec_prearm;
 #endif // USE_SPEC_PREARM_SCREEN
+    uint32_t rtc_ms;
 } osdConfig_t;
 
 PG_DECLARE(osdConfig_t, osdConfig);

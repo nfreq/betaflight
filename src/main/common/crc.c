@@ -40,6 +40,22 @@ uint16_t crc16_ccitt(uint16_t crc, unsigned char a)
     return crc;
 }
 
+uint16_t crc16_ccitt_uint32(uint32_t value) {
+    uint16_t crc = 0xFFFF;
+    for (int i = 0; i < 4; ++i) { 
+        unsigned char byte = (value >> (24 - i * 8)) & 0xFF;
+        crc ^= (uint16_t)byte << 8;
+        for (int j = 0; j < 8; ++j) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ 0x1021;
+            } else {
+                crc = crc << 1;
+            }
+        }
+    }
+    return crc;
+}
+
 uint16_t crc16_ccitt_update(uint16_t crc, const void *data, uint32_t length)
 {
     const uint8_t *p = (const uint8_t *)data;
